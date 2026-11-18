@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carbon Ledger — Annual CO₂ Emissions by Country</title>
+<meta name="description" content="Annual CO2 emissions by country, 1750–2025, with year-over-year change, historic trend, cumulative emissions and a live emissions counter. Source: Our World in Data / Global Carbon Budget.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">Carbon Ledger · A science ledger, not a live sensor</p>
+    <h1>Annual CO₂ emissions, by country</h1>
+    <p class="lede">Territorial CO₂ from fossil fuels and industry, for every country in the dataset, 1750–2025 — with the year-over-year change, the historic trend, and what has accumulated in the atmosphere.</p>
+    <p class="caption">Source: Our World in Data CO₂ dataset, based on the Global Carbon Budget (Global Carbon Project). Latest year in this build: <strong id="latestYear">2025</strong>. See Methods &amp; sources at the bottom of the page.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Live ledger -->
+  <section aria-labelledby="live-h">
+    <h2 id="live-h">The active ledger</h2>
+    <p class="caption">Live counter — an estimate, not a measurement. It spreads the latest annual world rate evenly across the year. Source: Global Carbon Budget via Our World in Data, 2025 world total 38,995 Mt CO₂.</p>
+    <div class="cards">
+      <div class="card big">
+        <div class="label">Emitted since you opened this page</div>
+        <div class="num" id="sinceOpened">0 t</div>
+        <div class="sub" id="rateLine">— tonnes per second</div>
+      </div>
+      <div class="card big">
+        <div class="label">Cumulative fossil CO₂ since 1750 — live estimate</div>
+        <div class="num" id="cumulativeLive">—</div>
+        <div class="sub" id="cumulativeSub">1,886,833 Mt at the end of 2025, plus the 2026 estimate to date</div>
+      </div>
+      <div class="card">
+        <div class="label">World, 2025</div>
+        <div class="num" id="world2025">38,995 Mt</div>
+        <div class="sub" id="worldYoY">+0.9% vs 2024</div>
+      </div>
+      <div class="card">
+        <div class="label">World, per person, 2025</div>
+        <div class="num">4.74 t</div>
+        <div class="sub">Source: Our World in Data / Global Carbon Budget</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- World trend -->
+  <section aria-labelledby="trend-h">
+    <h2 id="trend-h">Historic trend — the world</h2>
+    <p class="caption">Annual CO₂ emissions, world total, 1750–2025 (Mt). The selected country is overlaid when you pick one below. Source: Our World in Data / Global Carbon Budget.</p>
+    <div class="chart-box"><svg id="worldChart" viewBox="0 0 900 320" role="img" aria-label="World annual CO2 emissions chart, 1750 to 2025"></svg></div>
+    <div class="legend"><span class="sw world"></span> World <span class="sw country"></span> <span id="legendCountry">Selected country</span></div>
+    <div class="stats" id="worldStats"></div>
+  </section>
+
+  <!-- Accumulated atmosphere -->
+  <section aria-labelledby="atm-h">
+    <h2 id="atm-h">Accumulated carbon</h2>
+    <p class="caption">Cumulative totals are sums of the annual series in the dataset. The airborne figures are model estimates — see the assumptions. Sources: Our World in Data / Global Carbon Budget; conversion and airborne fraction, Global Carbon Project.</p>
+    <div class="cards">
+      <div class="card"><div class="label">Cumulative fossil + industry, 1750–2025</div><div class="num">1,887 Gt</div><div class="sub">1,886,833 Mt. United States 439 Gt (23.3%), China 298 Gt, Russia 124 Gt.</div></div>
+      <div class="card"><div class="label">Cumulative incl. land-use change, 1750–2025</div><div class="num">2,780 Gt</div><div class="sub">2,779,811 Mt, including deforestation and other land-use change.</div></div>
+      <div class="card"><div class="label">Estimated airborne from fossil CO₂</div><div class="num">≈ 849 Gt</div><div class="sub">Model estimate: 45% airborne fraction × 1,887 Gt. ≈ 109 ppm. Not a direct measurement.</div></div>
+      <div class="card"><div class="label">Observed CO₂ in the air</div><div class="num">≈ 425 ppm</div><div class="sub">Mauna Loa annual mean 424.6 ppm in 2024 (NOAA GML), up from ~278 ppm pre-industrial (1750).</div></div>
+    </div>
+    <p class="note"><strong>How to read the airborne estimate:</strong> roughly 45% of emitted CO₂ stays in the atmosphere on multi-year timescales; the ocean and land take up the rest. That fraction varies year to year, so the airborne stock is an estimate, and the observed concentration is the check against it. 1 ppm of CO₂ ≈ 7.81 Gt CO₂ (2.13 Gt of carbon × 44/12).</p>
+  </section>
+
+  <!-- Country table -->
+  <section aria-labelledby="table-h">
+    <h2 id="table-h">Every country</h2>
+    <p class="caption">Annual CO₂ emissions by country for the selected year. YoY % is the change vs the previous year, computed from the annual series. Cumulative is the sum of that country's annual emissions from 1750 to the selected year. Source: Our World in Data / Global Carbon Budget.</p>
+    <div class="controls">
+      <label>Year <input type="range" id="yearRange" min="1950" max="2025" value="2025" step="1"> <strong id="yearLabel">2025</strong></label>
+      <label>Search <input type="search" id="search" placeholder="e.g. China, Brazil, Nigeria…" aria-label="Search countries"></label>
+      <label>Sort by
+        <select id="sort">
+          <option value="latest">Emissions (largest first)</option>
+          <option value="name">Country name (A–Z)</option>
+          <option value="growth">YoY % (largest first)</option>
+          <option value="cumulative">Cumulative (largest first)</option>
+          <option value="percapita">Per person (largest first)</option>
+        </select>
+      </label>
+      <button id="showAll" type="button">Show all countries</button>
+    </div>
+    <p class="note" id="tableMeta"></p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Country</th><th>Emissions (Mt)</th><th>Share of world</th><th>YoY %</th><th>Per person (t)</th><th>Cumulative (Mt)</th><th>Share of cumulative</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="caption">Per-person figures are published in the dataset only for the latest year in this build; for earlier years the column shows “—”. A blank YoY % means no value for the previous year (a gap is not zero).</p>
+  </section>
+
+  <!-- Country detail -->
+  <section aria-labelledby="detail-h">
+    <h2 id="detail-h">Country detail</h2>
+    <p class="caption">Pick a country in the table above to see its own trend and its last ten years. Source: Our World in Data / Global Carbon Budget.</p>
+    <div id="detail"><p class="note">No country selected yet — click any row in the table, or use the button below for China.</p><button id="pickChina" type="button">Show China</button></div>
+  </section>
+
+  <!-- Methods -->
+  <section aria-labelledby="methods-h">
+    <h2 id="methods-h">Methods, model assumptions &amp; sources</h2>
+    <div class="methods">
+      <h3>What is counted</h3>
+      <p>Territorial CO₂ from fossil fuels and industry: coal, oil, gas, flaring, cement and other industrial processes, produced within a country's borders. This is the headline figure in every chart and table on this page.</p>
+      <h3>What is not in the headline figure</h3>
+      <p>Land-use change (mainly deforestation) is excluded from the headline totals and shown separately (world: 4,352 Mt in 2025; cumulative 897,551 Mt). Other greenhouse gases (methane, nitrous oxide) and consumption-based emissions (emissions embedded in imports) are not counted here.</p>
+      <h3>Model &amp; estimate assumptions</h3>
+      <ul>
+        <li><strong>Live counter:</strong> the 2025 world rate (38,995 Mt / year) is spread evenly across the year — 1,237 tonnes per second — and applied to 2026 until a newer annual total is published. It is an accounting spread, not a real-time measurement; real emissions vary by season, day and hour.</li>
+        <li><strong>Cumulative live total:</strong> cumulative fossil CO₂ at the end of 2025 (1,886,833 Mt) plus the 2026 estimate from 1 January to now, at the same even rate.</li>
+        <li><strong>Airborne estimate:</strong> 45% of cumulative emissions are assumed to remain in the atmosphere (the long-run airborne fraction in the Global Carbon Budget); the rest is taken up by ocean and land. 1 ppm CO₂ ≈ 7.81 Gt CO₂. Both are approximations — the observed Mauna Loa concentration is the measured check.</li>
+        <li><strong>YoY %:</strong> (this year − last year) / last year × 100, from the annual series. Early years (before ~1900 for many countries) are sparser and less certain; a missing year is a gap, not zero.</li>
+        <li><strong>Rounding:</strong> figures are shown to the nearest Mt / 0.1% where shown; underlying values are in Mt in <code>data.json</code>.</li>
+      </ul>
+      <h3>Sources</h3>
+      <ul>
+        <li>Our World in Data, “CO₂ and greenhouse gas emissions” dataset — <a href="https://ourworldindata.org/co2-and-greenhouse-gas-emissions">ourworldindata.org/co2-and-greenhouse-gas-emissions</a> (CC BY)</li>
+        <li>Global Carbon Project, Global Carbon Budget (2026 edition, data through 2025), via Our World in Data — dataset at <a href="https://github.com/owid/co2-data">github.com/owid/co2-data</a></li>
+        <li>NOAA Global Monitoring Laboratory, Mauna Loa CO₂ annual means (424.6 ppm in 2024)</li>
+        <li>IPCC AR6: pre-industrial CO₂ ≈ 278 ppm (1750); 1850 value 285.5 ppm</li>
+      </ul>
+      <p class="caption">Data file: <code>data.json</code> in this folder, built by <code>scripts/fetch_data.py</code> from the Our World in Data CSV. Re-run that script to refresh the data when a new Global Carbon Budget is published.</p>
+    </div>
+  </section>
+</main>
+<footer class="wrap"><p>Carbon Ledger · Built from public data, with sources credited in every caption. This page estimates; it does not measure emissions in real time.</p></footer>
+<script src="app.js"></script>
+</body>
+</html>
