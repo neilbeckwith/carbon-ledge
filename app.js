@@ -66,7 +66,44 @@ function drawChart() {
     `<span>2025: ${fmtMt(w25.co2)} Mt (${pct(w25.growth)} vs 2024)</span><span>Cumulative 1750–2025: ${fmtMt(w25.cum)} Mt</span>`;
 }
 
-function renderTable() {
+/* CSV export — pure client-side, no new dependencies. */
+function csvEscape(v) {
+  if (v == null) return "";
+  const s = String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function downloadCsv(filename, header, rows) {
+  const lines = [header.map(csvEscape).join(",")].concat(rows.map((r) => r.map(csvEscape).join(",")));
+  const blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function downloadTableCsv() {
+  const rows = currentRows();
+  downloadCsv(`carbon-ledger-countries-${selectedYear}.csv`,
+    ["Country", "ISO", "Emissions (Mt CO2)", "Share of world (%)", "YoY (%)", "Per person (t CO2)", "Cumulative (Mt CO2)", "Share of cumulative (%)"],
+    rows.map((r) => [r.c.name, r.c.iso, +r.v.toFixed(3), r.share == null ? null : +r.share.toFixed(2),
+      r.growth == null ? null : +r.growth.toFixed(1), r.percap == null ? null : +r.percap.toFixed(2),
+      r.cum == null ? null : +r.cum.toFixed(3), r.cumShare == null ? null : +r.cumShare.toFixed(2)]));
+}
+function downloadCountryCsv() {
+  if (!selectedCountry) return;
+  const c = DATA.countries.find((cc) => cc.iso === selectedCountry);
+  if (!c) return;
+  downloadCsv(`carbon-ledger-${c.iso.toLowerCase()}-history.csv`,
+    ["Year", "Emissions (Mt CO2)", "YoY (%)", "Cumulative (Mt CO2)"],
+    c.series.map(([yr, v]) => {
+      const g = yoy(c, yr);
+      return [yr, +v.toFixed(3), g == null ? null : +g.toFixed(1), +cumulativeTo(c, yr).toFixed(3)];
+    }));
+}
+
+function currentRows() {
   const q = ($("search").value || "").toLowerCase();
   const worldYear = DATA.world.find((w) => w.year === selectedYear);
   const worldCo2 = worldYear ? worldYear.co2 : null;
@@ -91,6 +128,11 @@ function renderTable() {
   else if (sort === "cumulative") rows.sort((a, b) => (b.cum ?? 0) - (a.cum ?? 0));
   else if (sort === "percapita") rows.sort((a, b) => (b.percap ?? -1) - (a.percap ?? -1));
   else rows.sort((a, b) => b.v - a.v);
+  return rows;
+}
+
+function renderTable() {
+  const rows = currentRows();
   const total = rows.length;
   const shown = showAll ? rows : rows.slice(0, 25);
   $("tableMeta").textContent = `${total} ${total === 1 ? "country" : "countries"} with data in ${selectedYear}${showAll ? "" : " — showing top 25 by the current sort"}. Click a row for that country's detail.`;
@@ -110,6 +152,7 @@ function selectCountry(iso) {
   const c = DATA.countries.find((cc) => cc.iso === iso);
   if (!c) return;
   drawChart();
+  $("downloadCountryCsv").disabled = false;
   const last10 = c.series.filter((p) => p[0] > DATA.meta.latest_year - 10).slice().reverse();
   const rows = last10.map(([yr, v]) => {
     const g = yoy(c, yr);
@@ -164,6 +207,8 @@ async function init() {
   $("search").addEventListener("input", renderTable);
   $("sort").addEventListener("change", renderTable);
   $("showAll").addEventListener("click", () => { showAll = !showAll; $("showAll").textContent = showAll ? "Show top 25" : "Show all countries"; renderTable(); });
+  $("downloadCsv").addEventListener("click", downloadTableCsv);
+  $("downloadCountryCsv").addEventListener("click", downloadCountryCsv);
   $("pickChina").addEventListener("click", () => selectCountry("CHN"));
 }
 init().catch((e) => { document.querySelector("main").insertAdjacentHTML("afterbegin", `<p class="note">Could not load data.json — ${e.message}. Serve this folder over HTTP (not file://) or check the data file.</p>`); });
