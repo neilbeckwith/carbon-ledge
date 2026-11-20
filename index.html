@@ -85,6 +85,7 @@
         </select>
       </label>
       <button id="showAll" type="button">Show all countries</button>
+      <button id="downloadCsv" type="button">Download CSV</button>
     </div>
     <p class="note" id="tableMeta"></p>
     <div class="table-wrap">
@@ -95,7 +96,7 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="caption">Per-person figures are published in the dataset only for the latest year in this build; for earlier years the column shows “—”. A blank YoY % means no value for the previous year (a gap is not zero).</p>
+    <p class="caption">Per-person figures are published in the dataset only for the latest year in this build; for earlier years the column shows “—”. A blank YoY % means no value for the previous year (a gap is not zero). Download CSV saves the full filtered table for the selected year (not just the top 25 shown), and the country-detail button saves that country's whole annual series.</p>
   </section>
 
   <!-- Country detail -->
@@ -103,6 +104,7 @@
     <h2 id="detail-h">Country detail</h2>
     <p class="caption">Pick a country in the table above to see its own trend and its last ten years. Source: Our World in Data / Global Carbon Budget.</p>
     <div id="detail"><p class="note">No country selected yet — click any row in the table, or use the button below for China.</p><button id="pickChina" type="button">Show China</button></div>
+    <p><button id="downloadCountryCsv" type="button" disabled>Download this country's history (CSV)</button></p>
   </section>
 
   <!-- Methods -->
