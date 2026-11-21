@@ -21,6 +21,8 @@ h3{font-size:16px;margin:18px 0 4px}
 .legend{font-size:13px;color:var(--muted);margin-top:8px}
 .sw{display:inline-block;width:14px;height:4px;vertical-align:middle;margin:0 4px 0 12px;border-radius:2px}
 .sw.world{background:var(--accent)} .sw.country{background:var(--accent2)}
+.sw.cmp1{background:var(--accent2)} .sw.cmp2{background:#2b6cb0} .sw.cmp3{background:var(--red)}
+.compare-label{font-size:14px;font-weight:600}
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .stats span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
 .controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:12px 0}
