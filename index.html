@@ -49,9 +49,16 @@
   <!-- World trend -->
   <section aria-labelledby="trend-h">
     <h2 id="trend-h">Historic trend — the world</h2>
-    <p class="caption">Annual CO₂ emissions, world total, 1750–2025 (Mt). The selected country is overlaid when you pick one below. Source: Our World in Data / Global Carbon Budget.</p>
+    <p class="caption">Annual CO₂ emissions, world total, 1750–2025 (Mt). Compare up to 3 countries below — their lines are drawn on the same world scale, so they are directly comparable with the world and with each other. Clicking a row in the table still overlays one country on its own scale when no comparison is set. Source: Our World in Data / Global Carbon Budget.</p>
     <div class="chart-box"><svg id="worldChart" viewBox="0 0 900 320" role="img" aria-label="World annual CO2 emissions chart, 1750 to 2025"></svg></div>
-    <div class="legend"><span class="sw world"></span> World <span class="sw country"></span> <span id="legendCountry">Selected country</span></div>
+    <div class="legend"><span class="sw world"></span> World <span class="sw country" id="legendCountrySw"></span><span id="legendCountry">Selected country</span><span id="compareLegend"></span></div>
+    <div class="controls">
+      <span class="compare-label">Compare countries:</span>
+      <label>1 <select id="compare1" aria-label="First country to compare"></select></label>
+      <label>2 <select id="compare2" aria-label="Second country to compare"></select></label>
+      <label>3 <select id="compare3" aria-label="Third country to compare"></select></label>
+      <button id="clearCompare" type="button">Clear comparison</button>
+    </div>
     <div class="stats" id="worldStats"></div>
   </section>
 
