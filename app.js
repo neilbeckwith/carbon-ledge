@@ -7,6 +7,8 @@ let DATA = null;
 let selectedYear = 2025;
 let showAll = false;
 let selectedCountry = null; // iso code
+let compareSlots = ["CHN", "", ""]; // up to 3 iso codes, one per picker slot; China pre-selected
+const COMPARE_COLORS = ["#b7791f", "#2b6cb0", "#a33"];
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n, d = 0) => n == null || isNaN(n) ? "—" : Number(n).toLocaleString("en-CA", { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -47,7 +49,24 @@ function drawChart() {
   }
   s += `<text x="${PL}" y="${PT - 4}" font-size="11" fill="#5a6b64">Mt CO₂ per year</text>`;
   s += `<path d="${line(world.map((w) => [w.year, w.co2]))}" fill="none" stroke="#0b6b4a" stroke-width="2.5"/>`;
-  if (selectedCountry) {
+  // Compare: up to 3 countries on the same world scale, so they are directly
+  // comparable with the world and each other. While a comparison is set, the
+  // single-country own-scale overlay below is suppressed to avoid mixing scales.
+  const cmp = compareSlots.filter(Boolean);
+  if (cmp.length) {
+    cmp.forEach((iso, i) => {
+      const c = DATA.countries.find((cc) => cc.iso === iso);
+      if (!c) return;
+      const pts = c.series.filter((p) => p[0] >= 1750 && p[1] != null);
+      s += `<path d="${line(pts)}" fill="none" stroke="${COMPARE_COLORS[i]}" stroke-width="2"/>`;
+    });
+    $("legendCountrySw").style.display = "none";
+    $("legendCountry").textContent = "";
+    $("compareLegend").innerHTML = cmp.map((iso, i) => {
+      const c = DATA.countries.find((cc) => cc.iso === iso);
+      return c ? `<span class="sw cmp${i + 1}"></span> ${c.name} (${fmtMt(c.latest)} Mt in ${c.latest_year})` : "";
+    }).join("");
+  } else if (selectedCountry) {
     const c = DATA.countries.find((cc) => cc.iso === selectedCountry);
     if (c) {
       const pts = c.series.filter((p) => p[0] >= 1750);
@@ -55,8 +74,14 @@ function drawChart() {
       const cmax = Math.max(...pts.map((p) => p[1]));
       const cy = (v) => PT + (1 - v / (cmax * 1.05)) * (H - PT - PB);
       s += `<path d="${pts.map((p, i) => (i ? "L" : "M") + x(p[0]).toFixed(1) + "," + cy(p[1]).toFixed(1)).join(" ")}" fill="none" stroke="#b7791f" stroke-width="2" stroke-dasharray="5 3"/>`;
+      $("legendCountrySw").style.display = "";
       $("legendCountry").textContent = c.name + " (own scale, dashed)";
     }
+    $("compareLegend").innerHTML = "";
+  } else {
+    $("legendCountrySw").style.display = "";
+    $("legendCountry").textContent = "Selected country";
+    $("compareLegend").innerHTML = "";
   }
   svg.innerHTML = s;
   const w25 = world.find((w) => w.year === 2025), w24 = world.find((w) => w.year === 2024);
@@ -64,6 +89,37 @@ function drawChart() {
     `<span>1750: ${fmtMt(world[0].co2)} Mt</span><span>1950: ${fmtMt((world.find((w) => w.year === 1950) || {}).co2)} Mt</span>` +
     `<span>2000: ${fmtMt((world.find((w) => w.year === 2000) || {}).co2)} Mt</span><span>2024: ${fmtMt(w24.co2)} Mt</span>` +
     `<span>2025: ${fmtMt(w25.co2)} Mt (${pct(w25.growth)} vs 2024)</span><span>Cumulative 1750–2025: ${fmtMt(w25.cum)} Mt</span>`;
+}
+
+/* Compare up to 3 countries on the world chart. */
+function populateCompareSelects() {
+  const opts = [{ iso: "", name: "—" }].concat(
+    DATA.countries.slice().sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({ iso: c.iso, name: c.name })));
+  ["compare1", "compare2", "compare3"].forEach((id, i) => {
+    const sel = $(id);
+    sel.innerHTML = opts.map((o) => `<option value="${o.iso}">${o.name}</option>`).join("");
+    sel.value = compareSlots[i] || "";
+  });
+}
+function onCompareChange(slot) {
+  const iso = $("compare" + (slot + 1)).value;
+  // a country can only appear once — clear it from the other slots
+  if (iso) {
+    for (let i = 0; i < 3; i++) {
+      if (i !== slot && compareSlots[i] === iso) {
+        compareSlots[i] = "";
+        $("compare" + (i + 1)).value = "";
+      }
+    }
+  }
+  compareSlots[slot] = iso;
+  drawChart();
+}
+function clearCompare() {
+  compareSlots = ["", "", ""];
+  ["compare1", "compare2", "compare3"].forEach((id) => { $(id).value = ""; });
+  drawChart();
 }
 
 /* CSV export — pure client-side, no new dependencies. */
@@ -203,12 +259,18 @@ async function init() {
   drawChart();
   renderTable();
   startCounter();
+  populateCompareSelects();
+  drawChart(); // re-draw with the pre-selected comparison (China)
   $("yearRange").addEventListener("input", (e) => { selectedYear = Number(e.target.value); $("yearLabel").textContent = selectedYear; renderTable(); });
   $("search").addEventListener("input", renderTable);
   $("sort").addEventListener("change", renderTable);
   $("showAll").addEventListener("click", () => { showAll = !showAll; $("showAll").textContent = showAll ? "Show top 25" : "Show all countries"; renderTable(); });
   $("downloadCsv").addEventListener("click", downloadTableCsv);
   $("downloadCountryCsv").addEventListener("click", downloadCountryCsv);
+  $("compare1").addEventListener("change", () => onCompareChange(0));
+  $("compare2").addEventListener("change", () => onCompareChange(1));
+  $("compare3").addEventListener("change", () => onCompareChange(2));
+  $("clearCompare").addEventListener("click", clearCompare);
   $("pickChina").addEventListener("click", () => selectCountry("CHN"));
 }
 init().catch((e) => { document.querySelector("main").insertAdjacentHTML("afterbegin", `<p class="note">Could not load data.json — ${e.message}. Serve this folder over HTTP (not file://) or check the data file.</p>`); });
