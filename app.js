@@ -91,19 +91,34 @@ function drawChart() {
     `<span>2025: ${fmtMt(w25.co2)} Mt (${pct(w25.growth)} vs 2024)</span><span>Cumulative 1750–2025: ${fmtMt(w25.cum)} Mt</span>`;
 }
 
-/* Compare up to 3 countries on the world chart. */
-function populateCompareSelects() {
-  const opts = [{ iso: "", name: "—" }].concat(
-    DATA.countries.slice().sort((a, b) => a.name.localeCompare(b.name))
-      .map((c) => ({ iso: c.iso, name: c.name })));
+/* Compare up to 3 countries on the world chart. The pickers are text inputs
+   with a datalist, so they filter as you type (220 countries is too many to
+   scroll). Typing is resolved to a country by name or ISO code. */
+function populateCountryList() {
+  const opts = DATA.countries.slice().sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => `<option value="${c.name}" label="${c.iso}"></option>`).join("");
+  $("countryList").innerHTML = opts;
   ["compare1", "compare2", "compare3"].forEach((id, i) => {
-    const sel = $(id);
-    sel.innerHTML = opts.map((o) => `<option value="${o.iso}">${o.name}</option>`).join("");
-    sel.value = compareSlots[i] || "";
+    const iso = compareSlots[i];
+    $(id).value = iso ? countryName(iso) : "";
   });
 }
+function countryName(iso) {
+  const c = DATA.countries.find((cc) => cc.iso === iso);
+  return c ? c.name : "";
+}
+function resolveCountry(text) {
+  const t = (text || "").trim();
+  if (!t) return "";
+  const lower = t.toLowerCase();
+  const c = DATA.countries.find((cc) => cc.name.toLowerCase() === lower || cc.iso.toLowerCase() === lower)
+    || DATA.countries.find((cc) => cc.name.toLowerCase().startsWith(lower));
+  return c ? c.iso : null;
+}
 function onCompareChange(slot) {
-  const iso = $("compare" + (slot + 1)).value;
+  const input = $("compare" + (slot + 1));
+  const iso = resolveCountry(input.value);
+  if (iso === null) { input.value = countryName(compareSlots[slot]); return; } // unknown text: revert
   // a country can only appear once — clear it from the other slots
   if (iso) {
     for (let i = 0; i < 3; i++) {
@@ -114,6 +129,7 @@ function onCompareChange(slot) {
     }
   }
   compareSlots[slot] = iso;
+  input.value = countryName(iso);
   drawChart();
 }
 function clearCompare() {
@@ -203,6 +219,47 @@ function renderTable() {
   document.querySelectorAll("#tbody tr").forEach((tr) => tr.addEventListener("click", () => selectCountry(tr.dataset.iso)));
 }
 
+/* Sector tap point — a transparent judgement, not a hidden score.
+   Each sector is rated 1–3 on reduction potential, ease of transition and
+   cost (3 = cheaper than the incumbent, 2 = adds slight cost, 1 = extensive
+   innovation still needed), and the score is share × potential × ease × cost.
+   The tap point is the highest score: the lowest friction and highest yield,
+   not necessarily the largest share. Ratings and their basis are in the
+   Methods section; the table in the panel shows every rating. */
+const SECTOR_META = [
+  { key: "coal", label: "Coal", potential: 3, potentialWord: "High", ease: 3, easeWord: "High", cost: 3, costWord: "Cheaper than the incumbent", stage: "Commercial", why: "91% of new renewable projects in 2024 were cheaper than the cheapest new fossil alternative (IRENA 2025).", costFigure: "Wind $34/MWh, solar $43/MWh — global average cost of new power, 2024 (IRENA 2025, measured)" },
+  { key: "oil", label: "Oil", potential: 3, potentialWord: "High", ease: 2, easeWord: "Medium", cost: 2, costWord: "Adds slight cost", stage: "Commercial", why: "EVs at lifetime cost parity in much of Europe, but higher upfront price and slow fleet turnover (IEA 2024).", costFigure: "No single $/t CO₂ figure is published — about $1,200 extra to build, about $4,700 fuel savings over 8 years (ICCT 2023, estimate)" },
+  { key: "gas", label: "Gas", potential: 2, potentialWord: "Medium", ease: 2, easeWord: "Medium", cost: 2, costWord: "Adds slight cost", stage: "Commercial", why: "Heat pumps are mature, but high-temperature industrial heat still needs hydrogen (IEA).", costFigure: "No single $/t CO₂ figure is published — 2–4× a gas boiler upfront, $300/yr (US) to $900/yr (Europe) lower bills (IEA 2022, estimate)" },
+  { key: "cement", label: "Cement", potential: 2, potentialWord: "Medium", ease: 1, easeWord: "Low", cost: 1, costWord: "Extensive innovation still needed", stage: "Early-stage", why: "~60% is process CO₂ from calcination; CCUS costs $100–200/t and is at demonstration scale (IEA; WEF 2023).", costFigure: "$100–200/t CO₂ captured; first full-scale plant Brevik, Norway, 400,000 t/yr since 2025 (IEA 2023, estimate)" },
+  { key: "flaring", label: "Flaring", potential: 1, potentialWord: "Low", ease: 3, easeWord: "High", cost: 3, costWord: "Cheaper than the incumbent", stage: "Commercial", why: "Captured gas has market value — about 40% of oil-and-gas methane abatement costs nothing net, and 74% is available at $10/t CO₂e or less (IEA).", costFigure: "About $0/t net for ~40% of abatement; 74% at $10/t CO₂e or less (IEA, estimate)" },
+  { key: "other", label: "Other industry", potential: 2, potentialWord: "Medium", ease: 1, easeWord: "Low", cost: 1, costWord: "Extensive innovation still needed", stage: "Early-stage", why: "Hydrogen steel (H₂-DRI) is at demonstration scale and uneconomical at scale (IEA).", costFigure: "Green steel premium ~$200–300/t steel; break-even needs hydrogen at $1.63/kg or less (Rosner et al. 2023, estimate)" },
+];
+
+function sectorBreakdownHtml(c) {
+  if (!c.sectors) return `<p class="note">No sector data in this build.</p>`;
+  const total = c.latest;
+  const rows = SECTOR_META.map((m) => {
+    const v = c.sectors[m.key] == null ? 0 : c.sectors[m.key];
+    const share = total ? v / total : 0;
+    return { ...m, v, share, score: share * m.potential * m.ease * m.cost };
+  });
+  const sum = rows.reduce((a, r) => a + r.v, 0);
+  const sumDiff = Math.abs(sum - total);
+  const tap = rows.slice().sort((a, b) => b.score - a.score)[0];
+  const largest = rows.slice().sort((a, b) => b.v - a.v)[0];
+  const body = rows.map((r) =>
+    `<tr${r === tap ? ' class="tap-row"' : ""}><td>${r.label}</td><td>${fmtMt(r.v)}</td>` +
+    `<td>${(r.share * 100).toFixed(1)}%</td><td>${r.potentialWord}</td><td>${r.easeWord}</td>` +
+    `<td>${r.costWord}</td><td>${r.costFigure}</td><td>${r.stage}</td><td>${r.score.toFixed(1)}</td></tr>`).join("");
+  return `<h3>Sector breakdown — ${c.latest_year}</h3>` +
+    `<p class="caption">Share of the country's fossil-and-industry total, with the tap-point ratings (1–3) and score. Score = share × reduction potential × ease × cost. Sources and the rating basis are in Methods &amp; sources.</p>` +
+    `<div class="table-wrap"><table><thead><tr><th>Sector</th><th>Mt CO₂</th><th>Share</th><th>Reduction potential</th><th>Ease</th><th>Cost</th><th>Cost of the solution</th><th>Stage</th><th>Score</th></tr></thead><tbody>${body}</tbody>` +
+    `<tfoot><tr><td><strong>Sectors sum</strong></td><td><strong>${fmtMt(sum)}</strong></td><td><strong>${(sum / total * 100).toFixed(1)}%</strong></td><td colspan="6">Total ${fmtMt(total)} Mt — ${sumDiff < 0.5 ? "sums to the total ✓" : "differs by " + fmt(sumDiff, 1) + " Mt"}</td></tr></tfoot></table></div>` +
+    `<p class="caption"><strong>What each row means.</strong> Coal — CO₂ from burning coal. Oil — from burning oil, petrol and diesel. Gas — from burning natural gas. Cement — from making cement, mostly the chemistry of limestone, not the fuel burned. Flaring — from burning off gas at oil and gas sites. Other industry — from other industrial processes, such as steel and chemicals. <strong>What each rating means.</strong> Reduction potential — how much of the sector's CO₂ the alternatives could remove. Ease — how fast and simply the switch can be made. Cost — what the solution costs compared with the incumbent. Cost of the solution — the sourced cost figure for the sector's main alternative, with its year and source; where no single published figure exists, that is stated. Stage — how mature the technology is: commercial means bought and sold today, early-stage means demonstration or pilot. Score — share × reduction potential × ease × cost; higher wins.</p>` +
+    `<p class="note tap"><strong>Tap point: ${tap.label}.</strong> Highest score (${tap.score.toFixed(1)}) — ${tap.potentialWord.toLowerCase()} reduction potential, ${tap.easeWord.toLowerCase()} ease, ${tap.costWord.toLowerCase()}, ${tap.stage.toLowerCase()} technology. ${tap.why}` +
+    (tap !== largest ? ` ${tap.label} is not the largest share — ${largest.label} is (${fmtMt(largest.v)} Mt, ${(largest.share * 100).toFixed(1)}%) — but it wins on lower friction and higher yield.` : ` It is also the largest share, so the easy cut is the big cut.`) + `</p>`;
+}
+
 function selectCountry(iso) {
   selectedCountry = iso;
   const c = DATA.countries.find((cc) => cc.iso === iso);
@@ -218,9 +275,41 @@ function selectCountry(iso) {
     `<h3>${c.name} (${c.iso})</h3>` +
     `<p>Latest year in the dataset: ${c.latest_year} — <strong>${fmtMt(c.latest)} Mt</strong> (${c.share == null ? "—" : c.share.toFixed(2) + "%"} of the world), ` +
     `${pct(c.growth_prct)} vs the previous year, ${c.per_capita == null ? "—" : c.per_capita.toFixed(2)} t per person, cumulative ${fmtMt(c.cumulative)} Mt.</p>` +
-    `<p class="caption">Annual emissions and YoY % for ${c.name}. Source: Our World in Data / Global Carbon Budget.</p>` +
-    `<div class="table-wrap"><table><thead><tr><th>Year</th><th>Emissions (Mt)</th><th>YoY %</th><th>Cumulative (Mt)</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    `<p class="caption">Annual emissions and YoY % for ${c.name}. Year is the calendar year. Emissions (Mt) is territorial CO₂ from fossil fuels and industry that year. YoY % is the change vs the previous year. Cumulative (Mt) is the sum of the country's annual emissions from 1750 to that year. Source: Our World in Data / Global Carbon Budget.</p>` +
+    `<div class="table-wrap"><table><thead><tr><th>Year</th><th>Emissions (Mt)</th><th>YoY %</th><th>Cumulative (Mt)</th></tr></thead><tbody>${rows}</tbody></table></div>` +
+    sectorBreakdownHtml(c) +
+    (c.luc != null ? `<p class="note">Natural net carbon: ${c.name}'s land was a net ${c.luc > 0 ? "source" : c.luc < 0 ? "sink" : "balance"} of ${c.luc > 0 ? "+" : ""}${fmt(c.luc, 0)} Mt CO₂ in ${c.latest_year} — <a href="#luc-h">see Natural net carbon →</a></p>` : "");
   $("detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* Natural net carbon — net land-use-change CO2 per country, latest year.
+   Net only: positive = net source, negative = net sink. No gross split
+   exists in the dataset, so none is shown. */
+let lucShowAll = false;
+function lucRows() {
+  const q = ($("lucSearch").value || "").toLowerCase();
+  let rows = DATA.countries.filter((c) => c.luc != null).map((c) => ({ c, luc: c.luc }));
+  if (q) rows = rows.filter((r) => r.c.name.toLowerCase().includes(q) || r.c.iso.toLowerCase().includes(q));
+  rows.sort((a, b) => b.luc - a.luc);
+  return rows;
+}
+function renderLuc() {
+  const rows = lucRows();
+  const shown = lucShowAll ? rows : rows.slice(0, 15);
+  $("lucBody").innerHTML = shown.map((r, i) =>
+    `<tr><td>${i + 1}</td><td>${r.c.name} <span style="color:#5a6b64">${r.c.iso}</span></td>` +
+    `<td class="${r.luc > 0 ? "neg" : r.luc < 0 ? "pos" : ""}">${r.luc > 0 ? "+" : ""}${fmt(r.luc, 0)}</td>` +
+    `<td>${r.luc > 0 ? "Net source" : r.luc < 0 ? "Net sink" : "Balanced"}</td></tr>`).join("");
+  const nSrc = rows.filter((r) => r.luc > 0).length, nSnk = rows.filter((r) => r.luc < 0).length;
+  const withData = DATA.countries.filter((c) => c.luc != null).length;
+  $("lucMeta").textContent = `${withData} of ${DATA.countries.length} countries have net land-use-change data for ${DATA.meta.latest_year} — ${nSrc} net sources, ${nSnk} net sinks. Showing the 15 largest net sources first${lucShowAll ? "" : "; use Show all countries for the full list"}.`;
+  const w = DATA.world.find((x) => x.year === DATA.meta.latest_year);
+  const topSrc = rows[0], topSnk = rows[rows.length - 1];
+  $("lucCards").innerHTML =
+    `<div class="card"><div class="label">World net land-use change, ${DATA.meta.latest_year}</div><div class="num">${w && w.luc != null ? "+" + fmt(w.luc, 0) + " Mt" : "—"}</div><div class="sub">Net source — fossil ${fmtMt(w.co2)} Mt + land-use ${fmt(w.luc, 0)} Mt = ${fmtMt(w.co2_incl_luc)} Mt including land-use change</div></div>` +
+    `<div class="card"><div class="label">Largest net source</div><div class="num">${topSrc ? topSrc.c.name : "—"}</div><div class="sub">${topSrc ? "+" + fmt(topSrc.luc, 0) + " Mt in " + DATA.meta.latest_year : ""}</div></div>` +
+    `<div class="card"><div class="label">Largest net sink</div><div class="num">${topSnk ? topSnk.c.name : "—"}</div><div class="sub">${topSnk ? fmt(topSnk.luc, 0) + " Mt in " + DATA.meta.latest_year : ""}</div></div>` +
+    `<div class="card"><div class="label">Countries without a value</div><div class="num">${DATA.countries.length - withData}</div><div class="sub">Mostly small territories, plus Taiwan, Hong Kong and Macao — a gap, not zero</div></div>`;
 }
 
 function startCounter() {
@@ -258,8 +347,9 @@ async function init() {
   }
   drawChart();
   renderTable();
+  renderLuc();
   startCounter();
-  populateCompareSelects();
+  populateCountryList();
   drawChart(); // re-draw with the pre-selected comparison (China)
   $("yearRange").addEventListener("input", (e) => { selectedYear = Number(e.target.value); $("yearLabel").textContent = selectedYear; renderTable(); });
   $("search").addEventListener("input", renderTable);
@@ -271,6 +361,13 @@ async function init() {
   $("compare2").addEventListener("change", () => onCompareChange(1));
   $("compare3").addEventListener("change", () => onCompareChange(2));
   $("clearCompare").addEventListener("click", clearCompare);
+  $("inspectCountry").addEventListener("change", () => {
+    const iso = resolveCountry($("inspectCountry").value);
+    if (iso) selectCountry(iso);
+    else $("inspectCountry").value = selectedCountry ? countryName(selectedCountry) : "";
+  });
+  $("lucSearch").addEventListener("input", renderLuc);
+  $("lucShowAll").addEventListener("click", () => { lucShowAll = !lucShowAll; $("lucShowAll").textContent = lucShowAll ? "Show top 15" : "Show all countries"; renderLuc(); });
   $("pickChina").addEventListener("click", () => selectCountry("CHN"));
 }
 init().catch((e) => { document.querySelector("main").insertAdjacentHTML("afterbegin", `<p class="note">Could not load data.json — ${e.message}. Serve this folder over HTTP (not file://) or check the data file.</p>`); });
