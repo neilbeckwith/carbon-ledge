@@ -18,6 +18,19 @@
 </header>
 
 <main class="wrap">
+  <!-- Table of contents -->
+  <nav class="toc" aria-label="Contents">
+    <strong>Contents</strong>
+    <a href="#live-h">The active ledger</a>
+    <a href="#trend-h">Historic trend</a>
+    <a href="#atm-h">Accumulated carbon</a>
+    <a href="#table-h">Every country</a>
+    <a href="#detail-h">Country detail</a>
+    <a href="#luc-h">Natural net carbon <span class="toc-new">New</span></a>
+    <a href="#methods-h">Methods &amp; sources</a>
+  </nav>
+  <p class="note">New: <strong>Natural net carbon</strong> — the land side of the ledger, separate from fossil totals. <a href="#luc-h">See the section →</a></p>
+
   <!-- Live ledger -->
   <section aria-labelledby="live-h">
     <h2 id="live-h">The active ledger</h2>
@@ -54,9 +67,10 @@
     <div class="legend"><span class="sw world"></span> World <span class="sw country" id="legendCountrySw"></span><span id="legendCountry">Selected country</span><span id="compareLegend"></span></div>
     <div class="controls">
       <span class="compare-label">Compare countries:</span>
-      <label>1 <select id="compare1" aria-label="First country to compare"></select></label>
-      <label>2 <select id="compare2" aria-label="Second country to compare"></select></label>
-      <label>3 <select id="compare3" aria-label="Third country to compare"></select></label>
+      <label>1 <input type="search" id="compare1" list="countryList" placeholder="Type to filter…" aria-label="First country to compare" autocomplete="off"></label>
+      <label>2 <input type="search" id="compare2" list="countryList" placeholder="Type to filter…" aria-label="Second country to compare" autocomplete="off"></label>
+      <label>3 <input type="search" id="compare3" list="countryList" placeholder="Type to filter…" aria-label="Third country to compare" autocomplete="off"></label>
+      <datalist id="countryList"></datalist>
       <button id="clearCompare" type="button">Clear comparison</button>
     </div>
     <div class="stats" id="worldStats"></div>
@@ -68,7 +82,7 @@
     <p class="caption">Cumulative totals are sums of the annual series in the dataset. The airborne figures are model estimates — see the assumptions. Sources: Our World in Data / Global Carbon Budget; conversion and airborne fraction, Global Carbon Project.</p>
     <div class="cards">
       <div class="card"><div class="label">Cumulative fossil + industry, 1750–2025</div><div class="num">1,887 Gt</div><div class="sub">1,886,833 Mt. United States 439 Gt (23.3%), China 298 Gt, Russia 124 Gt.</div></div>
-      <div class="card"><div class="label">Cumulative incl. land-use change, 1750–2025</div><div class="num">2,780 Gt</div><div class="sub">2,779,811 Mt, including deforestation and other land-use change.</div></div>
+      <a href="#luc-h" class="card-link"><div class="card"><div class="label">Cumulative incl. land-use change, 1750–2025</div><div class="num">2,780 Gt</div><div class="sub">2,779,811 Mt, including deforestation and other land-use change. See Natural net carbon →</div></div></a>
       <div class="card"><div class="label">Estimated airborne from fossil CO₂</div><div class="num">≈ 849 Gt</div><div class="sub">Model estimate: 45% airborne fraction × 1,887 Gt. ≈ 109 ppm. Not a direct measurement.</div></div>
       <div class="card"><div class="label">Observed CO₂ in the air</div><div class="num">≈ 425 ppm</div><div class="sub">Mauna Loa annual mean 424.6 ppm in 2024 (NOAA GML), up from ~278 ppm pre-industrial (1750).</div></div>
     </div>
@@ -103,15 +117,40 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
+    <p class="caption"><strong>What each column means.</strong> Emissions (Mt) — territorial CO₂ from fossil fuels and industry in the selected year. Share of world — the country's share of the world total that year. YoY % — the change vs the previous year. Per person (t) — emissions per person, published only for the latest year. Cumulative (Mt) — the sum of the country's annual emissions from 1750 to the selected year. Share of cumulative — the country's share of the world's cumulative total.</p>
     <p class="caption">Per-person figures are published in the dataset only for the latest year in this build; for earlier years the column shows “—”. A blank YoY % means no value for the previous year (a gap is not zero). Download CSV saves the full filtered table for the selected year (not just the top 25 shown), and the country-detail button saves that country's whole annual series.</p>
   </section>
 
   <!-- Country detail -->
   <section aria-labelledby="detail-h">
     <h2 id="detail-h">Country detail</h2>
-    <p class="caption">Pick a country in the table above to see its own trend and its last ten years. Source: Our World in Data / Global Carbon Budget.</p>
-    <div id="detail"><p class="note">No country selected yet — click any row in the table, or use the button below for China.</p><button id="pickChina" type="button">Show China</button></div>
+    <p class="caption">Pick a country in the table above to see its own trend, its last ten years, and its emissions broken down by sector — with the sector where cutting is easiest and pays most. Source: Our World in Data / Global Carbon Budget.</p>
+    <div class="controls">
+      <label>Inspect a country <input type="search" id="inspectCountry" list="countryList" placeholder="Type to filter…" aria-label="Country to inspect" autocomplete="off"></label>
+      <button id="pickChina" type="button">Show China</button>
+    </div>
+    <div id="detail"><p class="note">No country selected yet — click any row in the table, type a country above, or use the button for China.</p></div>
     <p><button id="downloadCountryCsv" type="button" disabled>Download this country's history (CSV)</button></p>
+  </section>
+
+  <!-- Natural net carbon -->
+  <section aria-labelledby="luc-h">
+    <h2 id="luc-h">Natural net carbon</h2>
+    <p class="caption">Net CO₂ from land-use change — mainly deforestation, minus regrowth and other land sinks — per country, for the latest year in the dataset. This is <strong>net only</strong>: a positive number means the country's land is a net source, a negative number means it is a net sink. The dataset carries no split of gross sources vs gross sinks, so none is shown here. Kept separate from the fossil-and-industry totals above. Source: Our World in Data / Global Carbon Budget.</p>
+    <div class="cards" id="lucCards"></div>
+    <div class="controls">
+      <label>Search <input type="search" id="lucSearch" placeholder="e.g. Brazil, Indonesia…" aria-label="Search land-use-change table"></label>
+      <button id="lucShowAll" type="button">Show all countries</button>
+    </div>
+    <p class="note" id="lucMeta"></p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Country</th><th>Net land-use change (Mt)</th><th>Source or sink</th></tr></thead>
+        <tbody id="lucBody"></tbody>
+      </table>
+    </div>
+    <p class="caption"><strong>What each column means.</strong> Net land-use change (Mt) — net CO₂ from land-use change in the latest year: a positive number means the country's land is a net source, a negative number means it is a net sink. Source or sink — whether the country's land overall adds CO₂ to the air or removes it.</p>
+    <p class="caption">Method: net land-use-change CO₂ as published in the dataset (<code>land_use_change_co2</code>). Identity check — fossil CO₂ + net land-use change = CO₂ including land-use change — holds for the world and for every country with data (largest difference 0.005 Mt, rounding). 194 of 220 countries have a value for 2025; the 26 without are mostly small territories, plus Taiwan, Hong Kong and Macao. A missing value is a gap, not zero.</p>
   </section>
 
   <!-- Methods -->
@@ -120,6 +159,20 @@
     <div class="methods">
       <h3>What is counted</h3>
       <p>Territorial CO₂ from fossil fuels and industry: coal, oil, gas, flaring, cement and other industrial processes, produced within a country's borders. This is the headline figure in every chart and table on this page.</p>
+      <h3>Sector split (country detail)</h3>
+      <p>Each country's latest-year total is split into six sectors from the same dataset — coal, oil, gas, cement, flaring, other industry — as published in the Our World in Data columns <code>coal_co2</code>, <code>oil_co2</code>, <code>gas_co2</code>, <code>cement_co2</code>, <code>flaring_co2</code>, <code>other_industry_co2</code>. A blank sector column in the source is 0 in Our World in Data's accounting: the six sectors sum to the fossil total for every country (largest difference 0.002 Mt, rounding). No end-use sectors (transport, buildings, etc.) are shown — the dataset does not carry them per country, and they are not invented here.</p>
+      <h3>The tap point — how it is judged</h3>
+      <p>For each sector the panel rates three things, on a 1–3 scale, and multiplies them by the sector's share of the country's total: <strong>reduction potential</strong> (how much of that sector's CO₂ the available alternatives can remove), <strong>ease of transition</strong> (how fast and simply the switch can be made), and <strong>cost</strong> (3 = cheaper than the incumbent, 2 = adds slight cost, 1 = extensive innovation still needed). The highlighted tap point is the sector with the highest score — the lowest friction and highest yield — not necessarily the largest share. The ratings are a transparent judgement, not a hidden score; the table shows every rating, so the reader can disagree with the weights. Basis, per sector:</p>
+      <ul>
+        <li><strong>Coal</strong> — potential high, ease high, cheaper than the incumbent, commercial. In 2024, 91% of new utility-scale renewable projects delivered power cheaper than the cheapest new fossil alternative; solar PV was 41% cheaper and onshore wind 53% cheaper (IRENA, <em>Renewable Power Generation Costs in 2024</em>, 2025). Cost of the solution: onshore wind $34/MWh, solar PV $43/MWh — global weighted-average LCOE, 2024 (IRENA 2025, measured project data).</li>
+        <li><strong>Oil</strong> — potential high, ease medium, adds slight cost, commercial. Electric cars were ~18% of 2023 car sales (IEA, <em>Global EV Outlook 2024</em>); battery costs are down ~93% since 2010 and lifetime cost parity with petrol cars is reached across much of Europe — but the upfront price is still higher and fleet turnover and charging take time. Cost of the solution: no single $/t CO₂ figure is published; the natural unit is about $1,200 extra build cost against about $4,700 fuel savings over 8 years (ICCT 2023, estimate).</li>
+        <li><strong>Gas</strong> — potential medium, ease medium, adds slight cost, commercial. Heat pumps are mature and commercial (IEA, <em>The Future of Heat Pumps</em>, 2022: heat pumps avoided about 7 billion m³ of gas use in the EU in 2025); renewable power can displace gas-fired power, but high-temperature industrial heat still needs hydrogen or electrification that is not yet routine. Cost of the solution: no single $/t CO₂ figure is published; heat pumps cost 2–4× a gas boiler upfront but typically $300/yr (US) to $900/yr (Europe) less to run (IEA 2022, estimate).</li>
+        <li><strong>Cement</strong> — potential medium, ease low, extensive innovation still needed, early-stage. About 60% of cement CO₂ is process emissions from limestone calcination, untouched by switching the fuel; CCUS on kilns costs roughly $100–200/t CO₂ and is at demonstration scale (TRL 6–9), with near-zero-emission cement under 1% of the market (IEA Cement Technology Roadmap; WEF Net-Zero Industry Tracker 2023). Lower-clinker cements (e.g. LC3) can cut ~35–40% with existing kilns. First full-scale plant: Brevik, Norway, 400,000 t CO₂/yr, operating since 2025.</li>
+        <li><strong>Flaring</strong> — potential low, ease high, cheaper than the incumbent, commercial. The CO₂ share is small, but ending routine flaring is among the cheapest abatement anywhere: the IEA estimates ~40% of oil-and-gas methane abatement is available at no net cost, and 74% at $10/t CO₂e or less, because the captured gas has market value (IEA <em>Global Methane Tracker 2023</em>; IEA <em>Sustainable Recovery</em> 2020), and ~90% of flaring is technically avoidable (World Bank Zero Routine Flaring by 2030).</li>
+        <li><strong>Other industry</strong> — potential medium, ease low, extensive innovation still needed, early-stage. Hydrogen-based steel (H₂-DRI) is at demonstration / early commercial scale and still uneconomical at scale, with many proposed projects cancelled or paused; the chemistry (hydrogen as reductant, not just fuel) has no cheap substitute yet (IEA Iron &amp; Steel Technology Roadmap; Project Drawdown). Cost of the solution: green steel premium ~$200–300/t steel at today's green-hydrogen prices; break-even needs hydrogen at $1.63/kg or less (Rosner et al. 2023, estimate).</li>
+      </ul>
+      <h3>Natural net carbon</h3>
+      <p>Net land-use-change CO₂ as published (<code>land_use_change_co2</code>): deforestation and other land-use emissions minus regrowth and land sinks, for the latest year. Positive = the country's land is a net source; negative = a net sink. No gross split is published in this dataset, so the section shows net only. The identity fossil + net land-use change = CO₂ including land-use change holds for the world (38,995 + 4,352 = 43,347 Mt in 2025) and for every country with data.</p>
       <h3>What is not in the headline figure</h3>
       <p>Land-use change (mainly deforestation) is excluded from the headline totals and shown separately (world: 4,352 Mt in 2025; cumulative 897,551 Mt). Other greenhouse gases (methane, nitrous oxide) and consumption-based emissions (emissions embedded in imports) are not counted here.</p>
       <h3>Model &amp; estimate assumptions</h3>
@@ -136,6 +189,7 @@
         <li>Global Carbon Project, Global Carbon Budget (2026 edition, data through 2025), via Our World in Data — dataset at <a href="https://github.com/owid/co2-data">github.com/owid/co2-data</a></li>
         <li>NOAA Global Monitoring Laboratory, Mauna Loa CO₂ annual means (424.6 ppm in 2024)</li>
         <li>IPCC AR6: pre-industrial CO₂ ≈ 278 ppm (1750); 1850 value 285.5 ppm</li>
+        <li>Tap-point ratings: IRENA (2025), <em>Renewable Power Generation Costs in 2024</em> (91% of new renewables cheaper than the cheapest fossil alternative); IEA (2024), <em>Global EV Outlook 2024</em> (EVs ~18% of 2023 car sales); ICCT (2023) (EV build cost vs fuel savings); IEA (2022), <em>The Future of Heat Pumps</em> (heat-pump costs and gas use avoided); IEA Cement Technology Roadmap and WEF Net-Zero Industry Tracker 2023 (cement CCUS cost and readiness); IEA <em>Global Methane Tracker 2023</em> and <em>Sustainable Recovery</em> 2020 (flaring and methane abatement cost); IEA Iron &amp; Steel Technology Roadmap and Rosner et al. (2023) (hydrogen-based steel at demonstration scale; green-steel break-even hydrogen price)</li>
       </ul>
       <p class="caption">Data file: <code>data.json</code> in this folder, built by <code>scripts/fetch_data.py</code> from the Our World in Data CSV. Re-run that script to refresh the data when a new Global Carbon Budget is published.</p>
     </div>
